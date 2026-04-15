@@ -10,6 +10,7 @@ members = [
     "crates/rpa-api",
     "crates/rpa-orchestrator",
     "apps/server",
+    "apps/desktop/src-tauri",
 ]
 resolver = "2"
 
