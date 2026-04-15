@@ -1,0 +1,16 @@
+[package]
+name = "rpa-orchestrator"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rpa-core = { workspace = true }
+rpa-engine = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros"] }

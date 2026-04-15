@@ -1,0 +1,18 @@
+[package]
+name = "rpa-plugin"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rpa-core = { workspace = true }
+rpa-workflow = { workspace = true }
+rpa-js = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+zip = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros"] }
