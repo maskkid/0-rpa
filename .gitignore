@@ -76,3 +76,8 @@ tarpaulin-report.*
 # Documentation build
 # ========================
 /doc/target/
+
+# ========================
+# 所有node_modules
+# ========================
+node_modules/

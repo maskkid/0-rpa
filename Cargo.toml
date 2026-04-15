@@ -97,3 +97,8 @@ rpa-orchestrator = { path = "crates/rpa-orchestrator" }
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+
+# Optimize dependencies in dev builds so incremental compiles stay fast.
+# Only our own crates remain unoptimized for faster compile-debug cycles.
+[profile.dev.package."*"]
+opt-level = 2

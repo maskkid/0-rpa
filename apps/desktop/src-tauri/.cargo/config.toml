@@ -1,0 +1,5 @@
+# Shared build cache across all workspace members and the desktop app.
+# Avoids duplicate compiles — a change to rpa-core done via the server
+# also counts when building the desktop target, and vice versa.
+[target-dir]
+target = "../../target"

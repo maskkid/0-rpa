@@ -14,8 +14,33 @@ default:
 dev:
     cargo check
 
-# Run all tests
-test:
+# ────────────────────────────
+# Desktop Client (Tauri)
+# ────────────────────────────
+
+# Start Tauri desktop client with hot-reload (frontend + Rust backend)
+desktop-dev:
+    cd apps/desktop && yarn tauri:dev
+
+# Start only the frontend dev server (Vite HMR, no Tauri window)
+desktop-fe:
+    cd apps/desktop && yarn dev
+
+# Build the Tauri desktop client for production
+desktop-build:
+    cd apps/desktop && yarn tauri:build
+
+# Check desktop Rust backend compilation
+desktop-check:
+    cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
+
+# Build desktop frontend only (Vite)
+desktop-build-fe:
+    cd apps/desktop && yarn build
+
+# ────────────────────────────
+# Testing
+# ────────────────────────────
     cargo test --workspace
 
 # Run core + engine tests only (fast feedback)
@@ -51,6 +76,10 @@ build-release:
 build-server:
     cargo build --release -p rpa-server
 
+# Build desktop binary only (release)
+build-desktop:
+    cargo build --release -p rpa-desktop
+
 # ────────────────────────────
 # Cross-compile: Windows
 # ────────────────────────────
@@ -84,8 +113,10 @@ fmt-check:
     cargo fmt --all -- --check
 
 # Run clippy lints
+# lint desktop Rust code too
 lint:
     cargo clippy --workspace --all-targets -- -D warnings
+    cargo clippy --manifest-path apps/desktop/src-tauri/Cargo.toml -- -D warnings
 
 # Full quality check: fmt + clippy + test
 check: fmt lint test
@@ -109,6 +140,18 @@ run:
 # Run server in release mode
 run-release:
     cargo run --release -p rpa-server
+
+# ────────────────────────────
+# Desktop Setup
+# ────────────────────────────
+
+# Install desktop frontend dependencies
+desktop-install:
+    cd apps/desktop && yarn
+
+# Initialize desktop project (first-time setup)
+desktop-init: desktop-install
+    @echo "Desktop client initialized. Run 'just desktop-dev' to start development."
 
 # ────────────────────────────
 # Documentation
