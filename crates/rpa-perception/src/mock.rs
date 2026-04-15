@@ -22,6 +22,9 @@ impl MockPerceptor {
                 text: Some(id.to_string()),
                 element_type: Some("Button".to_string()),
                 platform_handle: None,
+                process_id: None,
+                process_name: None,
+                window_title: None,
             },
             should_fail: false,
         }
@@ -36,6 +39,9 @@ impl MockPerceptor {
                 text: None,
                 element_type: None,
                 platform_handle: None,
+                process_id: None,
+                process_name: None,
+                window_title: None,
             },
             should_fail: true,
         }

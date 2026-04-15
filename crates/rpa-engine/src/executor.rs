@@ -2,7 +2,7 @@
 
 use rpa_core::condition::Condition;
 use rpa_core::context::Context;
-use rpa_core::element::Element;
+use rpa_core::element::{Element, Rect};
 use rpa_core::error::{RpaError, Result};
 use rpa_core::instruction::{Instruction, MouseButton, ScrollDirection};
 use rpa_core::target::Target;
@@ -186,6 +186,53 @@ impl<'a> Executor<'a> {
                 self.actor.scroll(&el, direction.clone(), *amount).await?;
                 Ok(ControlFlow::Continue)
             }
+            // ──────────────────────────────
+            // Non-UIA / Mouse Operations
+            // ──────────────────────────────
+            Instruction::MouseMove { x, y } => {
+                self.actor.mouse_move(*x, *y).await?;
+                Ok(ControlFlow::Continue)
+            }
+            Instruction::MouseDown { button, x, y } => {
+                self.actor.mouse_down(button.clone(), *x, *y).await?;
+                Ok(ControlFlow::Continue)
+            }
+            Instruction::MouseUp { button, x, y } => {
+                self.actor.mouse_up(button.clone(), *x, *y).await?;
+                Ok(ControlFlow::Continue)
+            }
+            Instruction::Drag { from, to, button } => {
+                self.exec_drag(from, to, button.clone()).await?;
+                Ok(ControlFlow::Continue)
+            }
+            // ──────────────────────────────
+            // Window Operations
+            // ──────────────────────────────
+            Instruction::SetForeground { target } => {
+                let el = self.find_element(target).await?;
+                self.actor.set_foreground(&el).await?;
+                Ok(ControlFlow::Continue)
+            }
+            Instruction::MoveWindow { .. } => {
+                // MoveWindow requires WindowPerceptor which is not yet wired to Executor.
+                // Return an error indicating this is not yet implemented.
+                Err(RpaError::InvalidInstruction(
+                    "MoveWindow requires WindowPerceptor".into(),
+                ))
+            }
+            // ──────────────────────────────
+            // Screenshot & OCR
+            // ──────────────────────────────
+            Instruction::Screenshot { target, region, save_path } => {
+                self.exec_screenshot(target.as_ref(), region.as_ref(), save_path.as_deref())
+                    .await?;
+                Ok(ControlFlow::Continue)
+            }
+            Instruction::OcrRegion { target, region, into_var } => {
+                let text = self.exec_ocr_region(target, region).await?;
+                self.ctx.set_var(into_var, Value::String(text));
+                Ok(ControlFlow::Continue)
+            }
         }
     }
 
@@ -282,6 +329,47 @@ impl<'a> Executor<'a> {
         }
     }
 
+    /// Execute a drag instruction (from one target to another).
+    async fn exec_drag(&self, from: &Target, to: &Target, button: MouseButton) -> Result<()> {
+        let from_el = self.find_element(from).await?;
+        let to_el = self.find_element(to).await?;
+        let (from_x, from_y) = from_el.center();
+        let (to_x, to_y) = to_el.center();
+
+        self.actor.mouse_move(from_x, from_y).await?;
+        self.actor.mouse_down(button.clone(), from_x, from_y).await?;
+        // Small delay between down and up
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        self.actor.mouse_move(to_x, to_y).await?;
+        self.actor.mouse_up(button.clone(), to_x, to_y).await?;
+        Ok(())
+    }
+
+    /// Execute a screenshot instruction.
+    async fn exec_screenshot(
+        &self,
+        _target: Option<&Target>,
+        region: Option<&Rect>,
+        save_path: Option<&str>,
+    ) -> Result<()> {
+        let image_data = self.actor.screenshot(region.cloned()).await?;
+        if let Some(path) = save_path {
+            std::fs::write(path, &image_data)
+                .map_err(|e| RpaError::ScreenshotFailed(format!("Failed to write screenshot: {}", e)))?;
+        }
+        Ok(())
+    }
+
+    /// Execute an OCR region instruction.
+    async fn exec_ocr_region(&self, _target: &Target, _region: &Rect) -> Result<String> {
+        // OcrRegion requires an OcrEngine which is not wired to Executor directly.
+        // The typical flow would be: find window → screenshot window → OCR region.
+        // For now, return an error indicating this needs more wiring.
+        Err(RpaError::InvalidInstruction(
+            "OcrRegion requires an OcrEngine to be wired to the VM".into(),
+        ))
+    }
+
     /// Evaluate a condition against the current context.
     fn evaluate_condition(&self, condition: &Condition) -> bool {
         match condition {
@@ -358,6 +446,25 @@ mod tests {
         async fn scroll(&self, _el: &Element, _dir: ScrollDirection, _amt: u32) -> Result<()> {
             Ok(())
         }
+        async fn mouse_move(&self, x: i32, y: i32) -> Result<()> {
+            self.actions.lock().unwrap().push(format!("mousemove:{}:{}", x, y));
+            Ok(())
+        }
+        async fn mouse_down(&self, button: MouseButton, x: i32, y: i32) -> Result<()> {
+            self.actions.lock().unwrap().push(format!("mousedown:{:?}:{}:{}", button, x, y));
+            Ok(())
+        }
+        async fn mouse_up(&self, button: MouseButton, x: i32, y: i32) -> Result<()> {
+            self.actions.lock().unwrap().push(format!("mouseup:{:?}:{}:{}", button, x, y));
+            Ok(())
+        }
+        async fn set_foreground(&self, el: &Element) -> Result<()> {
+            self.actions.lock().unwrap().push(format!("setforeground:{}", el.id));
+            Ok(())
+        }
+        async fn screenshot(&self, _region: Option<Rect>) -> Result<Vec<u8>> {
+            Ok(vec![])
+        }
     }
 
     struct TestPerceptor;
@@ -371,6 +478,9 @@ mod tests {
                 text: Some("test".into()),
                 element_type: Some("Button".into()),
                 platform_handle: None,
+                process_id: None,
+                process_name: None,
+                window_title: None,
             })
         }
         async fn find_all(&self, target: &Target, ctx: &Context) -> Result<Vec<Element>> {

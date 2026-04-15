@@ -44,6 +44,18 @@ pub enum RpaError {
     #[error("Sandbox violation: {0}")]
     Sandbox(String),
 
+    #[error("Window not found: {0}")]
+    WindowNotFound(String),
+
+    #[error("Process not found: {0}")]
+    ProcessNotFound(String),
+
+    #[error("OCR failed: {0}")]
+    OcrFailed(String),
+
+    #[error("Screenshot failed: {0}")]
+    ScreenshotFailed(String),
+
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

@@ -15,6 +15,8 @@ pub enum StrategyType {
     Text,
     Image,
     Position,
+    Window,
+    Ocr,
 }
 
 /// A perceptor paired with its strategy type.
@@ -46,6 +48,9 @@ impl MultiStrategyFinder {
                 text: None,
                 element_type: Some("position".into()),
                 platform_handle: None,
+                process_id: None,
+                process_name: None,
+                window_title: None,
             });
         }
 
@@ -117,6 +122,8 @@ impl MultiStrategyFinder {
                 vec![StrategyType::Image, StrategyType::UIA, StrategyType::Text]
             }
             Target::Position { .. } => vec![],
+            Target::Window { .. } => vec![StrategyType::Window],
+            Target::Region { .. } => vec![StrategyType::Window],
         }
     }
 }
@@ -135,6 +142,9 @@ mod tests {
             text: Some(id.into()),
             element_type: Some("Button".into()),
             platform_handle: None,
+            process_id: None,
+            process_name: None,
+            window_title: None,
         }
     }
 

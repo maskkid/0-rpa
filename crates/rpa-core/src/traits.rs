@@ -1,9 +1,10 @@
 //! Core traits that define the abstraction boundaries of the RPA system.
 
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 
 use crate::context::Context;
-use crate::element::Element;
+use crate::element::{Element, Rect};
 use crate::error::Result;
 use crate::instruction::ModifierKey;
 use crate::instruction::{MouseButton, ScrollDirection};
@@ -48,6 +49,25 @@ pub trait Actor: Send + Sync {
         direction: ScrollDirection,
         amount: u32,
     ) -> Result<()>;
+
+    // ──────────────────────────────
+    // Non-UIA / Mouse Operations
+    // ──────────────────────────────
+
+    /// Move the mouse cursor to absolute screen coordinates.
+    async fn mouse_move(&self, x: i32, y: i32) -> Result<()>;
+
+    /// Press a mouse button at absolute screen coordinates.
+    async fn mouse_down(&self, button: MouseButton, x: i32, y: i32) -> Result<()>;
+
+    /// Release a mouse button at absolute screen coordinates.
+    async fn mouse_up(&self, button: MouseButton, x: i32, y: i32) -> Result<()>;
+
+    /// Bring a window to the foreground.
+    async fn set_foreground(&self, element: &Element) -> Result<()>;
+
+    /// Take a screenshot of the screen or a region.
+    async fn screenshot(&self, region: Option<Rect>) -> Result<Vec<u8>>;
 }
 
 /// Trait for providing workflows (from plugins, filesystem, etc).
@@ -80,4 +100,106 @@ pub trait JsRuntime: Send + Sync {
 
     /// Get a global variable from the JS context.
     async fn get_var(&self, name: &str) -> Result<Value>;
+}
+
+// ──────────────────────────────
+// Window & Non-UIA Perception
+// ──────────────────────────────
+
+use crate::target::WindowSelector;
+
+/// Trait for finding and interacting with windows.
+///
+/// Used for automating applications that don't expose standard UIA structure,
+/// such as games, Electron apps, Qt apps, and DirectUI applications.
+#[async_trait]
+pub trait WindowPerceptor: Send + Sync {
+    /// Find a single window matching the selector.
+    async fn find_window(&self, selector: &WindowSelector) -> Result<Element>;
+
+    /// Find all windows matching the selector.
+    async fn find_all_windows(&self, selector: &WindowSelector) -> Result<Vec<Element>>;
+
+    /// Bring a window to the foreground.
+    async fn set_foreground(&self, element: &Element) -> Result<()>;
+
+    /// Get the currently active (foreground) window.
+    async fn get_foreground_window(&self) -> Result<Element>;
+}
+
+/// Result of an OCR recognition operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OcrResult {
+    /// The recognized text.
+    pub text: String,
+    /// Confidence score between 0.0 and 1.0.
+    pub confidence: f64,
+    /// Bounding rectangle of the recognized text in the image.
+    pub bounds: Rect,
+}
+
+/// Trait for optical character recognition.
+#[async_trait]
+pub trait OcrEngine: Send + Sync {
+    /// Recognize text in an image, optionally limited to a region.
+    async fn recognize(&self, image_data: &[u8], region: Option<Rect>) -> Result<String>;
+
+    /// Recognize text with per-result confidence and bounds.
+    async fn recognize_with_confidence(
+        &self,
+        image_data: &[u8],
+        region: Option<Rect>,
+    ) -> Result<Vec<OcrResult>>;
+}
+
+/// Trait for capturing screenshots.
+#[async_trait]
+pub trait ScreenCapturer: Send + Sync {
+    /// Capture the entire screen.
+    async fn capture_screen(&self) -> Result<Vec<u8>>;
+
+    /// Capture a specific region of the screen.
+    async fn capture_region(&self, region: Rect) -> Result<Vec<u8>>;
+
+    /// Capture a specific window.
+    async fn capture_window(&self, element: &Element) -> Result<Vec<u8>>;
+}
+
+/// Highlight configuration for debug visualization.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DebugHighlight {
+    /// Bounding rectangle to highlight.
+    pub bounds: Rect,
+    /// Label to display near the highlight.
+    pub label: String,
+    /// Color of the highlight.
+    pub color: DebugColor,
+    /// How long to display the highlight in milliseconds.
+    pub duration_ms: u64,
+}
+
+/// Color for debug highlights.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DebugColor {
+    Red,
+    Green,
+    Blue,
+    Yellow,
+}
+
+/// Trait for debug visualization (overlays and annotated screenshots).
+#[async_trait]
+pub trait DebugCapturer: Send + Sync {
+    /// Capture a screenshot with highlights drawn on it.
+    ///
+    /// Returns the path to the saved screenshot.
+    async fn capture_with_highlight(
+        &self,
+        region: Option<Rect>,
+        highlights: Vec<DebugHighlight>,
+        save_path: &str,
+    ) -> Result<String>;
+
+    /// Show a highlight overlay on screen for a duration.
+    async fn show_overlay(&self, highlights: Vec<DebugHighlight>) -> Result<()>;
 }

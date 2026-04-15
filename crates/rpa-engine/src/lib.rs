@@ -10,3 +10,4 @@ pub mod vm;
 
 pub use vm::Vm;
 pub use vm::VmConfig;
+pub use vm::DebugConfig;

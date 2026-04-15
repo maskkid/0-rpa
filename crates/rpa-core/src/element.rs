@@ -48,12 +48,26 @@ pub struct Element {
     pub element_type: Option<String>,
     /// Platform-specific handle (HWND on Windows).
     pub platform_handle: Option<u64>,
+    /// Process ID of the process that owns this element (for window elements).
+    pub process_id: Option<u32>,
+    /// Name of the process that owns this element (e.g., "notepad.exe").
+    pub process_name: Option<String>,
+    /// Window title (for window elements).
+    pub window_title: Option<String>,
 }
 
 impl Element {
     /// Get the center point of this element's bounds.
     pub fn center(&self) -> (i32, i32) {
         self.bounds.center()
+    }
+
+    /// Add window information to this element.
+    pub fn with_window_info(mut self, pid: u32, name: String, title: String) -> Self {
+        self.process_id = Some(pid);
+        self.process_name = Some(name);
+        self.window_title = Some(title);
+        self
     }
 }
 

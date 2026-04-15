@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::condition::Condition;
+use crate::element::Rect;
 use crate::spec::DataSpec;
 use crate::target::Target;
 use crate::value::Value;
@@ -127,6 +128,73 @@ pub enum Instruction {
         target: Target,
         direction: ScrollDirection,
         amount: u32,
+    },
+
+    // ──────────────────────────────
+    // Non-UIA / Mouse Operations
+    // ──────────────────────────────
+
+    /// Move the mouse cursor to absolute screen coordinates.
+    MouseMove {
+        x: i32,
+        y: i32,
+    },
+
+    /// Press a mouse button at absolute screen coordinates.
+    MouseDown {
+        button: MouseButton,
+        x: i32,
+        y: i32,
+    },
+
+    /// Release a mouse button at absolute screen coordinates.
+    MouseUp {
+        button: MouseButton,
+        x: i32,
+        y: i32,
+    },
+
+    /// Drag from one target position to another.
+    Drag {
+        from: Target,
+        to: Target,
+        button: MouseButton,
+    },
+
+    // ──────────────────────────────
+    // Window Operations
+    // ──────────────────────────────
+
+    /// Bring a window to the foreground (activate it).
+    SetForeground {
+        target: Target,
+    },
+
+    /// Move and/or resize a window.
+    MoveWindow {
+        target: Target,
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+    },
+
+    // ──────────────────────────────
+    // Screenshot & OCR
+    // ──────────────────────────────
+
+    /// Take a screenshot of the screen, a window, or a region.
+    Screenshot {
+        target: Option<Target>,
+        region: Option<Rect>,
+        save_path: Option<String>,
+    },
+
+    /// Perform OCR on a region and store the result in a variable.
+    OcrRegion {
+        target: Target,
+        region: Rect,
+        into_var: String,
     },
 }
 

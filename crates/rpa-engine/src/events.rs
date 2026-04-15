@@ -1,6 +1,7 @@
 //! Execution event types for monitoring and logging.
 
 use serde::{Deserialize, Serialize};
+use rpa_core::element::Rect;
 use rpa_core::value::Value;
 
 /// Events emitted during VM execution for monitoring, logging, and SSE streaming.
@@ -59,5 +60,32 @@ pub enum ExecutionEvent {
         max_retries: u32,
         delay_ms: u64,
         error: String,
+    },
+
+    // ──────────────────────────────
+    // Debug Visualization Events
+    // ──────────────────────────────
+
+    /// A debug highlight was shown on screen.
+    DebugHighlight {
+        bounds: Rect,
+        label: String,
+        color: String,
+        duration_ms: u64,
+    },
+
+    /// A debug screenshot was captured.
+    DebugScreenshot {
+        path: String,
+        step_index: usize,
+        before_or_after: String,
+    },
+
+    /// A debug action (click, mousemove, etc.) was performed.
+    DebugAction {
+        action_type: String,
+        position: Option<(i32, i32)>,
+        region: Option<Rect>,
+        screenshot_path: Option<String>,
     },
 }

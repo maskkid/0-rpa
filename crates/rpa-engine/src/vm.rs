@@ -1,6 +1,7 @@
 //! The Automation VM - the central execution engine.
 
 use rpa_core::context::RetryConfig;
+use rpa_core::element::Rect;
 use rpa_core::error::{RpaError, Result};
 use rpa_core::instruction::Instruction;
 use rpa_core::task::TaskResult;
@@ -42,6 +43,36 @@ impl Default for VmConfig {
     }
 }
 
+/// Debug visualization configuration.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DebugConfig {
+    /// Whether debug mode is enabled.
+    pub enabled: bool,
+    /// Whether to show highlights on each action.
+    pub highlight: bool,
+    /// Duration to show highlights in milliseconds.
+    pub highlight_duration_ms: u64,
+    /// Whether to capture a screenshot before and after each step.
+    pub screenshot_on_step: bool,
+    /// Directory to save debug screenshots.
+    pub screenshot_dir: String,
+    /// Delay between steps in debug mode (ms).
+    pub slow_motion_ms: u64,
+}
+
+impl Default for DebugConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            highlight: true,
+            highlight_duration_ms: 500,
+            screenshot_on_step: false,
+            screenshot_dir: "./debug_screenshots".into(),
+            slow_motion_ms: 0,
+        }
+    }
+}
+
 /// The Automation VM - orchestrates all RPA operations.
 pub struct Vm {
     perceptors: Vec<Arc<dyn Perceptor>>,
@@ -50,6 +81,7 @@ pub struct Vm {
     js_runtime: Option<Arc<dyn JsRuntime>>,
     workflow_provider: Option<Arc<dyn WorkflowProvider>>,
     config: VmConfig,
+    debug_config: DebugConfig,
 }
 
 impl Vm {
@@ -62,6 +94,7 @@ impl Vm {
             js_runtime: None,
             workflow_provider: None,
             config,
+            debug_config: DebugConfig::default(),
         }
     }
 
@@ -90,9 +123,20 @@ impl Vm {
         self
     }
 
+    /// Set the debug configuration.
+    pub fn with_debug_config(mut self, config: DebugConfig) -> Self {
+        self.debug_config = config;
+        self
+    }
+
     /// Get a reference to the VM config.
     pub fn config(&self) -> &VmConfig {
         &self.config
+    }
+
+    /// Get a reference to the debug config.
+    pub fn debug_config(&self) -> &DebugConfig {
+        &self.debug_config
     }
 
     /// Build a MultiStrategyFinder from the registered perceptors.
@@ -247,6 +291,26 @@ impl Actor for NoopActor {
     ) -> Result<()> {
         Err(RpaError::Action("No actor registered".into()))
     }
+
+    async fn mouse_move(&self, _x: i32, _y: i32) -> Result<()> {
+        Err(RpaError::Action("No actor registered".into()))
+    }
+
+    async fn mouse_down(&self, _button: rpa_core::instruction::MouseButton, _x: i32, _y: i32) -> Result<()> {
+        Err(RpaError::Action("No actor registered".into()))
+    }
+
+    async fn mouse_up(&self, _button: rpa_core::instruction::MouseButton, _x: i32, _y: i32) -> Result<()> {
+        Err(RpaError::Action("No actor registered".into()))
+    }
+
+    async fn set_foreground(&self, _element: &rpa_core::element::Element) -> Result<()> {
+        Err(RpaError::Action("No actor registered".into()))
+    }
+
+    async fn screenshot(&self, _region: Option<rpa_core::element::Rect>) -> Result<Vec<u8>> {
+        Err(RpaError::Action("No actor registered".into()))
+    }
 }
 
 
@@ -284,6 +348,21 @@ mod tests {
         async fn scroll(&self, _el: &Element, _dir: rpa_core::instruction::ScrollDirection, _amt: u32) -> Result<()> {
             Ok(())
         }
+        async fn mouse_move(&self, _x: i32, _y: i32) -> Result<()> {
+            Ok(())
+        }
+        async fn mouse_down(&self, _button: MouseButton, _x: i32, _y: i32) -> Result<()> {
+            Ok(())
+        }
+        async fn mouse_up(&self, _button: MouseButton, _x: i32, _y: i32) -> Result<()> {
+            Ok(())
+        }
+        async fn set_foreground(&self, _el: &Element) -> Result<()> {
+            Ok(())
+        }
+        async fn screenshot(&self, _region: Option<Rect>) -> Result<Vec<u8>> {
+            Ok(vec![])
+        }
     }
 
     #[derive(Clone)]
@@ -298,6 +377,9 @@ mod tests {
                 text: Some("mock".into()),
                 element_type: Some("Button".into()),
                 platform_handle: None,
+                process_id: None,
+                process_name: None,
+                window_title: None,
             })
         }
         async fn find_all(&self, target: &Target, ctx: &Context) -> Result<Vec<Element>> {

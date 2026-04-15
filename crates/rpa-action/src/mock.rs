@@ -1,7 +1,7 @@
 //! Mock actor for testing.
 
-use rpa_core::context::Context;
 use rpa_core::element::Element;
+use rpa_core::element::Rect;
 use rpa_core::error::Result;
 use rpa_core::instruction::{MouseButton, ScrollDirection};
 use rpa_core::traits::Actor;
@@ -71,5 +71,45 @@ impl Actor for MockActor {
             .unwrap()
             .push(format!("scroll:{}:{:?}:{}", element.id, direction, amount));
         Ok(())
+    }
+
+    async fn mouse_move(&self, x: i32, y: i32) -> Result<()> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push(format!("mousemove:{}:{}", x, y));
+        Ok(())
+    }
+
+    async fn mouse_down(&self, button: MouseButton, x: i32, y: i32) -> Result<()> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push(format!("mousedown:{:?}:{}:{}", button, x, y));
+        Ok(())
+    }
+
+    async fn mouse_up(&self, button: MouseButton, x: i32, y: i32) -> Result<()> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push(format!("mouseup:{:?}:{}:{}", button, x, y));
+        Ok(())
+    }
+
+    async fn set_foreground(&self, element: &Element) -> Result<()> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push(format!("setforeground:{}", element.id));
+        Ok(())
+    }
+
+    async fn screenshot(&self, _region: Option<Rect>) -> Result<Vec<u8>> {
+        self.actions
+            .lock()
+            .unwrap()
+            .push("screenshot".into());
+        Ok(vec![0x89, 0x50, 0x4E, 0x47]) // PNG magic bytes
     }
 }
